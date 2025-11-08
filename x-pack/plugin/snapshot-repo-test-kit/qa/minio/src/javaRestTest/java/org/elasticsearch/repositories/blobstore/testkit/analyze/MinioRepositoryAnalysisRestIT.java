@@ -20,20 +20,22 @@ import org.junit.rules.TestRule;
 @ThreadLeakFilters(filters = { TestContainersThreadFilter.class })
 public class MinioRepositoryAnalysisRestIT extends AbstractRepositoryAnalysisRestTestCase {
 
+    /*
     public static final MinioTestContainer minioFixture = new MinioTestContainer(
         true,
         "s3_test_access_key",
         "s3_test_secret_key",
         "bucket"
     );
+    */
 
     public static ElasticsearchCluster cluster = ElasticsearchCluster.local()
         .distribution(DistributionType.DEFAULT)
-        .keystore("s3.client.repository_test_kit.access_key", "s3_test_access_key")
-        .keystore("s3.client.repository_test_kit.secret_key", "s3_test_secret_key")
+        .keystore("s3.client.repository_test_kit.access_key", "minioadmin")
+        .keystore("s3.client.repository_test_kit.secret_key", "minioadmin")
         .setting("logger.org.elasticsearch.repositories.s3", "trace")
         .setting("logger.org.elasticsearch.repositories.blobstore.testkit.analyze", "trace")
-        .setting("s3.client.repository_test_kit.endpoint", minioFixture::getAddress)
+        .setting("s3.client.repository_test_kit.endpoint", "http://127.0.0.1:9000")
         .setting("logger.org.elasticsearch.repositories.blobstore", "trace")
         .setting("logger.org.elasticsearch.repositories.RepositoriesService", "trace")
         .setting("xpack.security.enabled", "false")
@@ -41,7 +43,7 @@ public class MinioRepositoryAnalysisRestIT extends AbstractRepositoryAnalysisRes
         .build();
 
     @ClassRule
-    public static TestRule ruleChain = RuleChain.outerRule(minioFixture).around(cluster);
+    public static TestRule ruleChain = cluster;// RuleChain.outerRule(minioFixture).around(cluster);
 
     @Override
     protected String repositoryType() {
