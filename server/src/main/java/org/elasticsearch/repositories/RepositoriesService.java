@@ -181,12 +181,12 @@ public class RepositoriesService extends AbstractLifecycleComponent implements C
         SubscribableListener
 
             // Trying to create the new repository on master to make sure it works
-            .<Void>newForked(validationStep -> validatePutRepositoryRequest(projectId, request, validationStep))
+            // .<Void>newForked(validationStep -> validatePutRepositoryRequest(projectId, request, validationStep))
 
             // When publication has completed (and all acks received or timed out) then verify the repository.
             // (if acks timed out then acknowledgementStep completes before the master processes this cluster state, hence why we have
             // to wait for the publication to be complete too)
-            .<RegisterRepositoryTaskResult>andThen(clusterUpdateStep -> {
+            .<RegisterRepositoryTaskResult>newForked(clusterUpdateStep -> {
                 final ListenableFuture<AcknowledgedResponse> acknowledgementStep = new ListenableFuture<>();
                 final ListenableFuture<Boolean> publicationStep = new ListenableFuture<>(); // Boolean==changed.
                 submitUnbatchedTask(

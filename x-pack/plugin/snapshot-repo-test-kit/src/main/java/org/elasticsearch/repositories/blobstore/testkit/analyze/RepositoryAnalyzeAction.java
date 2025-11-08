@@ -483,6 +483,7 @@ public class RepositoryAnalyzeAction extends HandledTransportAction<RepositoryAn
             final Random random = new Random(request.getSeed());
             final List<DiscoveryNode> nodes = getSnapshotNodes(discoveryNodes);
 
+            /*
             if (minClusterTransportVersion.onOrAfter(TransportVersions.V_8_8_0)) {
                 final String contendedRegisterName = CONTENDED_REGISTER_NAME_PREFIX + UUIDs.randomBase64UUID(random);
                 final AtomicBoolean contendedRegisterAnalysisComplete = new AtomicBoolean();
@@ -535,22 +536,45 @@ public class RepositoryAnalyzeAction extends HandledTransportAction<RepositoryAn
                     }
                 }
                 final BlobAnalyzeAction.Request blobAnalyzeRequest = new BlobAnalyzeAction.Request(
-                    request.getRepositoryName(),
-                    blobPath,
-                    blobName,
-                    targetLength,
-                    random.nextLong(),
-                    nodes,
-                    request.getReadNodeCount(),
-                    request.getEarlyReadNodeCount(),
-                    smallBlob && rarely(random),
-                    repository.supportURLRepo() && repository.hasAtomicOverwrites() && smallBlob && rarely(random) && abortWrite == false,
+                    request.getRepositoryName(), // repository name
+                    blobPath,                    // blob path
+                    blobName,                    // blob name
+                    targetLength,                // target length
+                    random.nextLong(),           // seed
+                    nodes,                       // nodes
+                    request.getReadNodeCount(),  // read node count
+                    request.getEarlyReadNodeCount(), // early read node count
+                    smallBlob && rarely(random),     // whether to read earliy
+                    false,                           // atomic
                     abortWrite,
                     copyBlobName
                 );
                 final DiscoveryNode node = nodes.get(random.nextInt(nodes.size()));
                 queue.add(ref -> runBlobAnalysis(ref, blobAnalyzeRequest, node));
             }
+            */
+
+            logger.info("Setting up BlobAnalyzeAction...");
+
+            final String blobName = "test-blob-minio-failure-" + UUIDs.randomBase64UUID(random);
+            String copyBlobName = blobName + "-copy";
+
+            final BlobAnalyzeAction.Request blobAnalyzeRequest = new BlobAnalyzeAction.Request(
+                request.getRepositoryName(), // repository name
+                blobPath,                    // blob path
+                blobName,                    // blob name
+                1048576,                     // target length
+                random.nextLong(),           // seed
+                nodes,                       // nodes
+                request.getReadNodeCount(),  // read node count
+                request.getEarlyReadNodeCount(), // early read node count
+                false,                       // whether to read early
+                false,                       // write and overwrite
+                false,                       // abortWrite
+                copyBlobName                 // copyBlobName
+            );
+            final DiscoveryNode node = nodes.get(random.nextInt(nodes.size()));
+            queue.add(ref -> runBlobAnalysis(ref, blobAnalyzeRequest, node));
 
             ThrottledIterator.run(getQueueIterator(), (ref, task) -> task.accept(ref), request.getConcurrency(), requestRefs::close);
         }

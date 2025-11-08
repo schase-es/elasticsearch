@@ -143,9 +143,13 @@ class S3BlobContainer extends AbstractBlobContainer {
         assert BlobContainer.assertPurposeConsistency(purpose, blobName);
         assert inputStream.markSupported() : "No mark support on inputStream breaks the S3 SDK's ability to retry requests";
         if (blobSize <= getLargeBlobThresholdInBytes()) {
+            logger.trace("Starting single upload for: " + blobName);
             executeSingleUpload(purpose, blobStore, buildKey(blobName), inputStream, blobSize, failIfAlreadyExists);
+            logger.trace("Finishing upload for: " + blobName);
         } else {
+            logger.trace("Starting multipart upload for: " + blobName);
             executeMultipartUpload(purpose, blobStore, buildKey(blobName), inputStream, blobSize, failIfAlreadyExists);
+            logger.trace("Finishing multipart upload for: " + blobName);
         }
     }
 
@@ -363,6 +367,7 @@ class S3BlobContainer extends AbstractBlobContainer {
 
         try {
             if (blobSize > getMaxCopySizeBeforeMultipart()) {
+                logger.trace("Blob size is too big -- using a multipart copy");
                 executeMultipartCopy(purpose, s3SourceBlobContainer, sourceBlobName, blobName, blobSize);
             } else {
                 // metadata is inherited from source, but not canned ACL or storage class
@@ -377,7 +382,9 @@ class S3BlobContainer extends AbstractBlobContainer {
                 S3BlobStore.configureRequestForMetrics(copyObjectRequestBuilder, blobStore, Operation.COPY_OBJECT, purpose);
                 final var copyObjectRequest = copyObjectRequestBuilder.build();
                 try (AmazonS3Reference clientReference = blobStore.clientReference()) {
+                    logger.trace("Starting blob copy: " + sourceBlobName + " -> " + blobName + ", request: " + copyObjectRequest);
                     clientReference.client().copyObject(copyObjectRequest);
+                    logger.trace("Finishing blob copy: " + sourceBlobName + " -> " + blobName);
                 }
             }
         } catch (final SdkException e) {
@@ -569,7 +576,9 @@ class S3BlobContainer extends AbstractBlobContainer {
             S3BlobStore.configureRequestForMetrics(putRequestBuilder, blobStore, Operation.PUT_OBJECT, purpose);
 
             final var putRequest = putRequestBuilder.build();
+            logger.trace("Starting single object put request: " + blobName + ", request: " + putRequest);
             clientReference.client().putObject(putRequest, RequestBody.fromInputStream(input, blobSize));
+            logger.trace("Completing single object put request: " + blobName);
         } catch (final SdkException e) {
             throw new IOException("Unable to upload object [" + blobName + "] using a single upload", e);
         }
@@ -607,8 +616,10 @@ class S3BlobContainer extends AbstractBlobContainer {
         try {
             final String uploadId;
             try (AmazonS3Reference clientReference = s3BlobStore.clientReference()) {
+                logger.trace("Starting multipart upload create: " + blobName);
                 uploadId = clientReference.client().createMultipartUpload(createMultipartUpload(purpose, operation, blobName)).uploadId();
                 cleanupOnFailureActions.add(() -> abortMultiPartUpload(purpose, uploadId, blobName));
+                logger.trace("Finishing multipart upload create: " + blobName);
             }
             if (Strings.isEmpty(uploadId)) {
                 throw new IOException("Failed to initialize multipart operation for " + blobName);
@@ -649,7 +660,9 @@ class S3BlobContainer extends AbstractBlobContainer {
             S3BlobStore.configureRequestForMetrics(completeMultipartUploadRequestBuilder, blobStore, operation, purpose);
             final var completeMultipartUploadRequest = completeMultipartUploadRequestBuilder.build();
             try (var clientReference = s3BlobStore.clientReference()) {
+                logger.trace("Starting multipart upload: " + blobName);
                 clientReference.client().completeMultipartUpload(completeMultipartUploadRequest);
+                logger.trace("Finishing multipart upload: " + blobName);
             }
             cleanupOnFailureActions.clear();
         } catch (final SdkException e) {

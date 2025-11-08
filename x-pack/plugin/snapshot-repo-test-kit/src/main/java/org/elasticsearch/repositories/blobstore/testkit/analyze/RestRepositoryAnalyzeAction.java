@@ -7,6 +7,9 @@
 
 package org.elasticsearch.repositories.blobstore.testkit.analyze;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import org.elasticsearch.client.internal.node.NodeClient;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.RestRequest;
@@ -23,6 +26,8 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 
 @ServerlessScope(Scope.INTERNAL)
 public class RestRepositoryAnalyzeAction extends BaseRestHandler {
+
+    private final Logger logger = LogManager.getLogger(RestRepositoryAnalyzeAction.class);
 
     @Override
     public List<Route> routes() {

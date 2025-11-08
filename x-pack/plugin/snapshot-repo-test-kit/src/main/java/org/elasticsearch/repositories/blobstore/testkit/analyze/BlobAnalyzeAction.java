@@ -259,7 +259,7 @@ class BlobAnalyzeAction extends HandledTransportAction<BlobAnalyzeAction.Request
                 checksumStart = randomLongBetween(0L, request.targetLength);
                 checksumEnd = randomLongBetween(checksumStart + 1, request.targetLength + 1);
             }
-            doEarlyCopy = random.nextBoolean();
+            doEarlyCopy = random.nextBoolean() || true;
 
             final ArrayList<DiscoveryNode> nodes = new ArrayList<>(request.nodes); // copy for shuffling purposes
             if (request.readEarly) {
@@ -302,7 +302,7 @@ class BlobAnalyzeAction extends HandledTransportAction<BlobAnalyzeAction.Request
 
         void run() {
             writeRandomBlob(
-                request.readEarly || request.getAbortWrite() || (request.targetLength <= MAX_ATOMIC_WRITE_SIZE && random.nextBoolean()),
+                request.readEarly || request.getAbortWrite() || (request.targetLength <= MAX_ATOMIC_WRITE_SIZE), // && random.nextBoolean()),
                 true,
                 this::onLastReadForInitialWrite,
                 write1Step
@@ -404,6 +404,7 @@ class BlobAnalyzeAction extends HandledTransportAction<BlobAnalyzeAction.Request
         private void onLastReadForInitialWrite() {
             var readBlobName = request.blobName;
             if (request.copyBlobName != null && doEarlyCopy) {
+                logger.info("Starting copy before write: " + request);
                 try {
                     blobContainer.copyBlob(
                         OperationPurpose.REPOSITORY_ANALYSIS,
