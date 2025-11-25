@@ -1554,7 +1554,7 @@ public class DesiredBalanceComputerTests extends ESAllocationTestCase {
         // Converges right away, verify the debug level convergence message.
         assertLoggerExpectationsFor(
             getComputeRunnableForIsFreshPredicate.apply(ignored -> true),
-            getLogExpectation.apply(new LogExpectationData(true, "2ms", 2))
+            getLogExpectation.apply(new LogExpectationData(true, "3ms", 2))
         );
         assertFinishReason.accept(DesiredBalance.ComputationFinishReason.CONVERGED);
         final var lastConvergenceTimestampMillis = computer.getLastConvergedTimeMillis();
@@ -1565,7 +1565,7 @@ public class DesiredBalanceComputerTests extends ESAllocationTestCase {
         // This INFO is triggered from the interval since last convergence timestamp.
         assertLoggerExpectationsFor(
             getComputeRunnableForIsFreshPredicate.apply(ignored -> iterationCounter.get() < 6),
-            getLogExpectation.apply(new LogExpectationData(false, "5ms", 5))
+            getLogExpectation.apply(new LogExpectationData(false, "6ms", 5))
         );
         assertFinishReason.accept(DesiredBalance.ComputationFinishReason.YIELD_TO_NEW_INPUT);
         assertLastConvergenceInfo.accept(new ExpectedLastConvergenceInfo(1, 6, lastConvergenceTimestampMillis));
@@ -1574,26 +1574,26 @@ public class DesiredBalanceComputerTests extends ESAllocationTestCase {
         // The next INFO is triggered from the interval since last INFO message logged, and then another after the interval period.
         assertLoggerExpectationsFor(
             getComputeRunnableForIsFreshPredicate.apply(ignored -> iterationCounter.get() < 9),
-            getLogExpectation.apply(new LogExpectationData(false, "10ms", 9, 2, 3, "3ms")),
-            getLogExpectation.apply(new LogExpectationData(false, "15ms", 14, 2, 8, "8ms"))
+            getLogExpectation.apply(new LogExpectationData(false, "11ms", 9, 2, 3, "3ms")),
+            getLogExpectation.apply(new LogExpectationData(false, "16ms", 14, 2, 8, "8ms"))
         );
         assertFinishReason.accept(DesiredBalance.ComputationFinishReason.YIELD_TO_NEW_INPUT);
         assertLastConvergenceInfo.accept(new ExpectedLastConvergenceInfo(2, 15, lastConvergenceTimestampMillis));
 
         assertLoggerExpectationsFor(
             getComputeRunnableForIsFreshPredicate.apply(ignored -> true),
-            getLogExpectation.apply(new LogExpectationData(false, "20ms", 18, 3, 3, "3ms")),
-            getLogExpectation.apply(new LogExpectationData(false, "25ms", 23, 3, 8, "8ms")),
-            getLogExpectation.apply(new LogExpectationData(true, "29ms", 27, 3, 12, "12ms"))
+            getLogExpectation.apply(new LogExpectationData(false, "21ms", 18, 3, 3, "3ms")),
+            getLogExpectation.apply(new LogExpectationData(false, "26ms", 23, 3, 8, "8ms")),
+            getLogExpectation.apply(new LogExpectationData(true, "30ms", 27, 3, 12, "12ms"))
         );
         assertFinishReason.accept(DesiredBalance.ComputationFinishReason.CONVERGED);
 
         // First INFO is triggered from interval since last converged, second is triggered from the inverval since the last INFO log.
         assertLoggerExpectationsFor(
             getComputeRunnableForIsFreshPredicate.apply(ignored -> true),
-            getLogExpectation.apply(new LogExpectationData(false, "5ms", 5)),
-            getLogExpectation.apply(new LogExpectationData(false, "10ms", 10)),
-            getLogExpectation.apply(new LogExpectationData(true, "12ms", 12))
+            getLogExpectation.apply(new LogExpectationData(false, "6ms", 5)),
+            getLogExpectation.apply(new LogExpectationData(false, "11ms", 10)),
+            getLogExpectation.apply(new LogExpectationData(true, "13ms", 12))
         );
         assertFinishReason.accept(DesiredBalance.ComputationFinishReason.CONVERGED);
 
@@ -1608,7 +1608,7 @@ public class DesiredBalanceComputerTests extends ESAllocationTestCase {
         requiredIterations.set(2);
         assertLoggerExpectationsFor(
             getComputeRunnableForIsFreshPredicate.apply(ignored -> iterationCounter.get() < 2),
-            getLogExpectation.apply(new LogExpectationData(true, "2ms", 2))
+            getLogExpectation.apply(new LogExpectationData(true, "103ms", 2))
         );
 
         // test a non-convergence and convergence message with a significant time delta,
@@ -1620,8 +1620,8 @@ public class DesiredBalanceComputerTests extends ESAllocationTestCase {
 
         assertLoggerExpectationsFor(
             getComputeRunnableForIsFreshPredicate.apply(ignored -> true),
-            getLogExpectation.apply(new LogExpectationData(false, "103ms", 2, 2, 1, "1ms")),
-            getLogExpectation.apply(new LogExpectationData(true, "104ms", 3, 2, 2, "2ms"))
+            getLogExpectation.apply(new LogExpectationData(false, "204ms", 2, 2, 1, "1ms")),
+            getLogExpectation.apply(new LogExpectationData(true, "205ms", 3, 2, 2, "2ms"))
         );
     }
 
