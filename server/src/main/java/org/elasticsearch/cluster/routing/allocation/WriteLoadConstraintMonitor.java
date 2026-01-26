@@ -22,6 +22,7 @@ import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.cluster.routing.RerouteService;
 import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.core.TimeValue;
@@ -185,7 +186,7 @@ public class WriteLoadConstraintMonitor {
                     lastRerouteTimeMillis == 0
                         ? "has never previously been called"
                         : "was last called [" + TimeValue.timeValueMillis(timeSinceLastRerouteMillis) + "] ago",
-                    nodeSummary(lastHotspotNodes),
+                    nodeSummary(lastHotspotNodeIdNames),
                     writeLoadConstraintSettings.getQueueLatencyThreshold()
                 );
             }
@@ -200,7 +201,7 @@ public class WriteLoadConstraintMonitor {
             );
             lastRerouteTimeMillis = currentTimeMillisSupplier.getAsLong();
 
-            recordHotspotStartTimes(state, newHotspotNodes, currentTimeMillis);
+            recordHotspotStartTimes(state, newHotspotNodeIdNames, currentTimeMillis);
         } else {
             logger.debug(
                 "Not calling reroute because we called reroute [{}] ago and there are no new hot spots",
@@ -246,7 +247,7 @@ public class WriteLoadConstraintMonitor {
 
         hotspotNodesCount.set(hotspotNodeStartTimes.size());
 
-        return lastHotspotNodes;
+        return lastHotspotNodeIdNames;
     }
 
     private List<LongWithAttributes> getHotspotNodesCount() {
