@@ -186,7 +186,7 @@ public class WriteLoadConstraintMonitor {
                     lastRerouteTimeMillis == 0
                         ? "has never previously been called"
                         : "was last called [" + TimeValue.timeValueMillis(timeSinceLastRerouteMillis) + "] ago",
-                    nodeSummary(lastHotspotNodeIdNames),
+                    nodeSummary(lastHotspotNodes),
                     writeLoadConstraintSettings.getQueueLatencyThreshold()
                 );
             }
@@ -201,7 +201,7 @@ public class WriteLoadConstraintMonitor {
             );
             lastRerouteTimeMillis = currentTimeMillisSupplier.getAsLong();
 
-            recordHotspotStartTimes(state, newHotspotNodeIdNames, currentTimeMillis);
+            recordHotspotStartTimes(state, newHotspotNodes, currentTimeMillis);
         } else {
             logger.debug(
                 "Not calling reroute because we called reroute [{}] ago and there are no new hot spots",
@@ -247,7 +247,7 @@ public class WriteLoadConstraintMonitor {
 
         hotspotNodesCount.set(hotspotNodeStartTimes.size());
 
-        return lastHotspotNodeIdNames;
+        return lastHotspotNodes;
     }
 
     private List<LongWithAttributes> getHotspotNodesCount() {
