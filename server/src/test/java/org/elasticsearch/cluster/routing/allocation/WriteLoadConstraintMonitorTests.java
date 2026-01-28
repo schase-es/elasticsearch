@@ -535,10 +535,7 @@ public class WriteLoadConstraintMonitorTests extends ESTestCase {
         final TestState testState = createTestStateWithNumberOfNodesAndHotSpots(10, 1, 1, 5, true);
         ClusterState clusterState = testState.clusterState();
 
-        String removeHotspotId = randomValueOtherThan(
-            clusterState.nodes().getMasterNodeId(),
-            () -> randomFrom(testState.hotspotNodeIds())
-        );
+        String removeHotspotId = randomValueOtherThan(clusterState.nodes().getMasterNodeId(), () -> randomFrom(testState.hotspotNodeIds()));
 
         final TestState testStateUpdated = testState.dropClusterStateNodeWithStaleClusterInfo(removeHotspotId);
         final ClusterState mismatchedClusterState = testStateUpdated.clusterState();
@@ -587,12 +584,7 @@ public class WriteLoadConstraintMonitorTests extends ESTestCase {
         Map<String, Long> hotspotFlagCounts = new HashMap<>();
         incrementHotspotFlagCounts(hotspotFlagCounts, testState.hotspotNodeIds());
         recordingMeterRegistry.getRecorder().collect();
-        assertMetricsCollected(
-            recordingMeterRegistry,
-            List.of(5L),
-            Map.of(),
-            hotspotFlagCounts
-        );
+        assertMetricsCollected(recordingMeterRegistry, List.of(5L), Map.of(), hotspotFlagCounts);
 
         long millisAdded = randomLongBetween(500, 1_000);
         currentTimeMillis.addAndGet(millisAdded);
