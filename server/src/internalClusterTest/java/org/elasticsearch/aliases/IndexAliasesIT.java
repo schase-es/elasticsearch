@@ -1444,6 +1444,9 @@ public class IndexAliasesIT extends ESIntegTestCase {
 
         state = clusterService().state();
         System.out.println("");
+
+        var getAliasAndIndexFinal = indicesAdmin().prepareGetAliases("*aliassearchtag*").setIndices("*indexsearchtag*").get();
+        System.out.println("");
     }
 
     private void createDataStream(String datastream) {
