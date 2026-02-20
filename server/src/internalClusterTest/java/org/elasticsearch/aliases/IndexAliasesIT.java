@@ -15,6 +15,8 @@ import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest.AliasA
 import org.elasticsearch.action.admin.indices.alias.get.GetAliasesResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
+import org.elasticsearch.action.admin.indices.template.put.TransportPutComposableIndexTemplateAction;
+import org.elasticsearch.action.datastreams.CreateDataStreamAction;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.index.IndexRequest;
@@ -22,14 +24,24 @@ import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.metadata.AliasMetadata;
+import org.elasticsearch.cluster.metadata.ComposableIndexTemplate;
+import org.elasticsearch.cluster.metadata.DataStreamLifecycle;
+import org.elasticsearch.cluster.metadata.DataStreamOptions;
 import org.elasticsearch.cluster.metadata.IndexAbstraction;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.cluster.metadata.Metadata;
+import org.elasticsearch.cluster.metadata.Template;
 import org.elasticsearch.common.StopWatch;
+import org.elasticsearch.common.compress.CompressedXContent;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.core.Nullable;
 import org.elasticsearch.core.TimeValue;
+import org.elasticsearch.datastreams.DataStreamsPlugin;
+import org.elasticsearch.index.mapper.extras.MapperExtrasPlugin;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermQueryBuilder;
+import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.rest.action.admin.indices.AliasesNotFoundException;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -38,9 +50,12 @@ import org.elasticsearch.search.aggregations.bucket.global.Global;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.test.ESIntegTestCase;
+import org.elasticsearch.test.transport.MockTransportService;
 import org.elasticsearch.xcontent.XContentType;
 
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -1355,6 +1370,123 @@ public class IndexAliasesIT extends ESIntegTestCase {
         final String writeIndex = randomAlphaOfLength(5).toLowerCase(Locale.ROOT);
         final String nonWriteIndex = randomAlphaOfLength(6).toLowerCase(Locale.ROOT);
         final String alias = "alias-" + randomAlphaOfLength(7).toLowerCase(Locale.ROOT);
+    }
+
+    @Override
+    protected Collection<Class<? extends Plugin>> nodePlugins() {
+        return List.of(
+            DataStreamsPlugin.class,
+            MockTransportService.TestPlugin.class,
+            MapperExtrasPlugin.class
+        );
+    }
+
+    public void testDeleteDatastreamAliasReproductionFull() throws InterruptedException, ExecutionException, IOException {
+        DataStreamLifecycle.Template lifecycle = DataStreamLifecycle.Template.DATA_DEFAULT;
+        putComposableIndexTemplate("id1", null, List.of("*indexsearchtag*"), null, null, lifecycle);
+
+        createDataStream("ds1_1m-indexsearchtag");
+        createDataStream("ds1_10m-indexsearchtag");
+        createDataStream("ds1_60m-indexsearchtag");
+
+        createDataStream("ds2_1m-indexsearchtag");
+        createDataStream("ds2_10m-indexsearchtag");
+        createDataStream("ds2_60m-indexsearchtag");
+
+        createDataStream("ds3_1m-indexsearchtag");
+        createDataStream("ds3_10m-indexsearchtag");
+        createDataStream("ds3_60m-indexsearchtag");
+
+        assertAcked(indicesAdmin().prepareAliases()
+            .addAlias("ds1_1m-indexsearchtag", "ds1_1m-aliassearchtag", termQuery("search_tag", "aliassearchtag"))
+        );
+        assertAcked(indicesAdmin().prepareAliases()
+            .addAlias("ds1_10m-indexsearchtag", "ds1_10m-aliassearchtag", termQuery("search_tag", "aliassearchtag"))
+        );
+        assertAcked(indicesAdmin().prepareAliases()
+            .addAlias("ds1_60m-indexsearchtag", "ds1_60m-aliassearchtag", termQuery("search_tag", "aliassearchtag"))
+        );
+
+        assertAcked(indicesAdmin().prepareAliases()
+            .addAlias("ds2_1m-indexsearchtag", "ds2_1m-aliassearchtag", termQuery("search_tag", "aliassearchtag"))
+        );
+        assertAcked(indicesAdmin().prepareAliases()
+            .addAlias("ds2_10m-indexsearchtag", "ds2_10m-aliassearchtag", termQuery("search_tag", "aliassearchtag"))
+        );
+        assertAcked(indicesAdmin().prepareAliases()
+            .addAlias("ds2_60m-indexsearchtag", "ds2_60m-aliassearchtag", termQuery("search_tag", "aliassearchtag"))
+        );
+
+        assertAcked(indicesAdmin().prepareAliases()
+            .addAlias("ds3_1m-indexsearchtag", "ds3_1m-aliassearchtag", termQuery("search_tag", "aliassearchtag"))
+        );
+        assertAcked(indicesAdmin().prepareAliases()
+            .addAlias("ds3_10m-indexsearchtag", "ds3_10m-aliassearchtag", termQuery("search_tag", "aliassearchtag"))
+        );
+        assertAcked(indicesAdmin().prepareAliases()
+            .addAlias("ds3_60m-indexsearchtag", "ds3_60m-aliassearchtag", termQuery("search_tag", "aliassearchtag"))
+        );
+
+        ClusterState state = clusterService().state();
+        System.out.println("");
+
+        var getIndex = indicesAdmin().prepareGetIndex().addIndices("*indexsearchtag*").get();
+        System.out.println("");
+
+        var getAlias = indicesAdmin().prepareGetAliases("*aliassearchtag*").get();
+        System.out.println("");
+
+        var getAliasAndIndex = indicesAdmin().prepareGetAliases("*aliassearchtag*").setIndices("*indexsearchtag*").get();
+        System.out.println("");
+
+        assertAcked(indicesAdmin().prepareAliases()
+            .removeAlias("*indexsearchtag*","*aliassearchtag*"));
+
+        state = clusterService().state();
+        System.out.println("");
+    }
+
+    private void createDataStream(String datastream) {
+        final var createDataStreamRequest = new CreateDataStreamAction.Request(TEST_REQUEST_TIMEOUT, TEST_REQUEST_TIMEOUT, datastream);
+        assertAcked(client().execute(CreateDataStreamAction.INSTANCE, createDataStreamRequest).actionGet());
+    }
+
+    static void putComposableIndexTemplate(
+        String id,
+        @Nullable String mappings,
+        List<String> patterns,
+        @Nullable Settings settings,
+        @Nullable Map<String, Object> metadata,
+        @Nullable DataStreamLifecycle.Template lifecycle
+    ) throws IOException {
+        putComposableIndexTemplate(id, mappings, patterns, settings, metadata, lifecycle, null);
+    }
+
+    static void putComposableIndexTemplate(
+        String id,
+        @Nullable String mappings,
+        List<String> patterns,
+        @Nullable Settings settings,
+        @Nullable Map<String, Object> metadata,
+        @Nullable DataStreamLifecycle.Template lifecycle,
+        @Nullable DataStreamOptions.Template options
+    ) throws IOException {
+        TransportPutComposableIndexTemplateAction.Request request = new TransportPutComposableIndexTemplateAction.Request(id);
+        request.indexTemplate(
+            ComposableIndexTemplate.builder()
+                .indexPatterns(patterns)
+                .template(
+                    Template.builder()
+                        .settings(settings)
+                        .mappings(mappings == null ? null : CompressedXContent.fromJSON(mappings))
+                        .lifecycle(lifecycle)
+                        .dataStreamOptions(options)
+                )
+                .metadata(metadata)
+                .dataStreamTemplate(new ComposableIndexTemplate.DataStreamTemplate())
+                .build()
+        );
+        client().execute(TransportPutComposableIndexTemplateAction.TYPE, request).actionGet();
     }
 
     private void checkAliases() {
